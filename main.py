@@ -17,6 +17,7 @@ class LoadBalancer:
 
     def add_server(self, server):
         self.pool.append(server)
+        
 
     def remove_server(self, server):
         self.pool.remove(server)
@@ -29,7 +30,8 @@ class LoadBalancer:
         packet = self.request_queue.get()
 
         selected_server = random.choice(self.pool)
-        return f"Request {packet.content} from {packet.source_ip} handled by {selected_server}"
+        selected_server.serverReqs +=1
+        return f"Request {packet.content} from {packet.source_ip} handled by {selected_server.serverId}"
 
 class Client:
     def __init__(self, load_balancer):
@@ -39,18 +41,22 @@ class Client:
     def make_request(self, content, source_ip):
         packet = Packet(content, source_ip)
         self.load_balancer.request_queue.put(packet)
+        
+class Server:
+    def __init__(self, serverId):
+        self.serverId = serverId
+        self.serverReqs = 0
+        
 
 if __name__ == "__main__":
     lb = LoadBalancer()
-
-    # Add some servers to the load balancer
-    ##lb.add_server("Server1")
-    ##lb.add_server("Server2")
-    ##lb.add_server("Server3")
     
-    
+        
+    #for i in range(noOfServers):
+    #    lb.add_server(f"Server{i+1}")
+        
     for i in range(noOfServers):
-        lb.add_server(f"Server{i+1}")
+        lb.add_server(Server(f"Server{i+1}"))
 
 
     client1 = Client(lb)
@@ -67,3 +73,7 @@ if __name__ == "__main__":
     for _ in range(noOfRequests*2):
         result = lb.distribute_request()
         print(result)
+        
+    for i in range(noOfServers):
+        serverchoice = lb.pool[i]
+        print(f"{serverchoice.serverId} no of requests {serverchoice.serverReqs}")
