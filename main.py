@@ -1,19 +1,28 @@
 import random
 import queue
+import threading
+import time
+import itertools
 
 
-noOfServers = random.randint(1,5)
-noOfRequests = 5
+noOfServers = 5 #random.randint(1,5)
+noOfRequests = 20
 
 class Packet:
-    def __init__(self, content, ip):
+    
+    def __init__(self, content, ip, connection_id):
         self.content = content
         self.source_ip = ip
+        self.connection_end = 0.0
+        self.connection_id = connection_id
 
 class LoadBalancer:
     def __init__(self):
         self.pool = []
         self.request_queue = queue.Queue()
+        # daemon set to true to shut down once program exits 
+        self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
+        self.check_connection_time.start()
 
     def add_server(self, server):
         self.pool.append(server)
@@ -26,32 +35,88 @@ class LoadBalancer:
         if not self.pool:
             return "No servers available"
         
+        connection_end_value = [1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0]
+        #connection_end_value = [120.0,122.0,125.0,127.0,129.0]
         # Get the next request from the queue
         packet = self.request_queue.get()
 
-        selected_server = random.choice(self.pool)
-        selected_server.serverReqs +=1
-        return f"Request {packet.content} from {packet.source_ip} handled by {selected_server.serverId}"
+        #selected_server = random.choice(self.pool)
+        
+        least = lb.pool[0]
+        
+        #time.sleep(1)
+        
+        for i in range(noOfServers):
+            selected_server = lb.pool[i]
+            
+            if selected_server.serverReqs < least.serverReqs:
+                least = lb.pool[i]
+                #least.serverReqs +=1
+                
+        
+        least.serverReqs +=1
+        least.totalReqs += 1
+        
+        packet.connection_end = time.time() + random.choice(connection_end_value)
+        least.serverConnections.append(packet)
+        return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
+    
+    def check_connection(self):
+        
+        while True:
+            time.sleep(0.25)
+            
+            
+            for i in range(noOfServers):
+                selected_server = lb.pool[i]
+                
+                try:
+                    for j in range(len(selected_server.serverConnections)):
+                        packet = selected_server.serverConnections[j]
+                
+                        if packet.connection_end < time.time():
+                            selected_server.serverConnections.remove(packet)
+                            selected_server.serverReqs -=1
+                except:
+                    next
+                
+                #if len(selected_server.serverConnections) == 0:
+                 #   next
+                #else:
+                 #   for j in range(len(selected_server.serverConnections)):
+                  #      packet = selected_server.serverConnections[j]
+                
+                   #     if packet.connection_end < time.time():
+                    #        selected_server.serverConnections.remove(packet)
+                     #       selected_server.serverReqs -=1
+                        
+                
 
 class Client:
     def __init__(self, load_balancer):
         self.load_balancer = load_balancer
         self.ip_add = f"10.10.0.{random.randint(1,254)}"
 
-    def make_request(self, content, source_ip):
-        packet = Packet(content, source_ip)
+    def make_request(self, content, source_ip, connection_id):
+        packet = Packet(content, source_ip, connection_id)
         self.load_balancer.request_queue.put(packet)
         
 class Server:
     def __init__(self, serverId):
         self.serverId = serverId
         self.serverReqs = 0
+        self.totalReqs = 0
+        self.serverConnections = []
         
 
 if __name__ == "__main__":
     lb = LoadBalancer()
     
-        
+    startingTime = time.time()
+    
+    print(f"starting time {startingTime}")
+    
+    
     #for i in range(noOfServers):
     #    lb.add_server(f"Server{i+1}")
         
@@ -61,18 +126,25 @@ if __name__ == "__main__":
 
     client1 = Client(lb)
     client2 = Client(lb)
+ 
+    
+    id_obj = itertools.count()
 
     # Sequential requests
     for i in range(noOfRequests):
-        client1.make_request(f"Request{i+1}", client1.ip_add)
+        
+        client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj))
         
      # Sequential requests
     for i in range(noOfRequests):
-        client2.make_request(f"Request{i+1}", client2.ip_add)
+        
+        client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj))
 
     for _ in range(noOfRequests*2):
+        currTime = time.time()
         result = lb.distribute_request()
-        print(result)
+        print(f"{result} and time {currTime}")
+        time.sleep(1)
         
     for i in range(noOfServers):
         serverchoice = lb.pool[i]
