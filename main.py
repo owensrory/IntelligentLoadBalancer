@@ -33,8 +33,14 @@ class LoadBalancer:
         self.pool.remove(server)
         
 
-    def check_server_capacity(self, server):
-        pass
+    def check_server_capacity(self, server, packet):
+        
+        if (server.maxCapacity - packet.packet_size) <= 0:
+            return False
+        else:
+            return True
+        
+        
 
     def distribute_request(self):
         if not self.pool:
@@ -49,13 +55,15 @@ class LoadBalancer:
         
         least = lb.pool[0]
         
-        self.check_server_capacity(least)
+        
         #time.sleep(1)
         
         for i in range(noOfServers):
             selected_server = lb.pool[i]
             
-            if selected_server.serverReqs < least.serverReqs:
+            if self.check_server_capacity(selected_server, packet) == False:
+                next
+            elif selected_server.serverReqs < least.serverReqs:
                 least = lb.pool[i]
                 #least.serverReqs +=1
                 
