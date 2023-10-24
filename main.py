@@ -10,11 +10,12 @@ noOfRequests = 20
 
 class Packet:
     
-    def __init__(self, content, ip, connection_id):
+    def __init__(self, content, ip, connection_id, packet_size):
         self.content = content
         self.source_ip = ip
         self.connection_end = 0.0
         self.connection_id = connection_id
+        self.packet_size = packet_size
 
 class LoadBalancer:
     def __init__(self):
@@ -30,6 +31,10 @@ class LoadBalancer:
 
     def remove_server(self, server):
         self.pool.remove(server)
+        
+
+    def check_server_capacity(self, server):
+        pass
 
     def distribute_request(self):
         if not self.pool:
@@ -44,6 +49,7 @@ class LoadBalancer:
         
         least = lb.pool[0]
         
+        self.check_server_capacity(least)
         #time.sleep(1)
         
         for i in range(noOfServers):
@@ -56,10 +62,12 @@ class LoadBalancer:
         
         least.serverReqs +=1
         least.totalReqs += 1
-        
-        packet.connection_end = time.time() + random.choice(connection_end_value)
+        least.maxCapacity -= packet.packet_size
+        packet.connection_end = time.time() + float(packet.packet_size)
         least.serverConnections.append(packet)
         return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
+    
+    
     
     def check_connection(self):
         
@@ -76,6 +84,7 @@ class LoadBalancer:
                 
                         if packet.connection_end < time.time():
                             selected_server.serverConnections.remove(packet)
+                            selected_server.maxCapacity += packet.packet_size
                             selected_server.serverReqs -=1
                 except:
                     next
@@ -97,8 +106,8 @@ class Client:
         self.load_balancer = load_balancer
         self.ip_add = f"10.10.0.{random.randint(1,254)}"
 
-    def make_request(self, content, source_ip, connection_id):
-        packet = Packet(content, source_ip, connection_id)
+    def make_request(self, content, source_ip, connection_id, packet_size):
+        packet = Packet(content, source_ip, connection_id, packet_size)
         self.load_balancer.request_queue.put(packet)
         
 class Server:
@@ -107,6 +116,7 @@ class Server:
         self.serverReqs = 0
         self.totalReqs = 0
         self.serverConnections = []
+        self.maxCapacity = 100      # This is in mb
         
 
 if __name__ == "__main__":
@@ -133,12 +143,12 @@ if __name__ == "__main__":
     # Sequential requests
     for i in range(noOfRequests):
         
-        client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj))
+        client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj), random.randint(1,40))
         
      # Sequential requests
     for i in range(noOfRequests):
         
-        client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj))
+        client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40))
 
     for _ in range(noOfRequests*2):
         currTime = time.time()
