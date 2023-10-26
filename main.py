@@ -5,8 +5,8 @@ import time
 import itertools
 
 
-noOfServers = 5 #random.randint(1,5)
-noOfRequests = 20
+noOfServers = 2 #random.randint(1,5)
+noOfRequests = 100
 
 class Packet:
     
@@ -53,27 +53,39 @@ class LoadBalancer:
 
         #selected_server = random.choice(self.pool)
         
-        least = lb.pool[0]
-        
-        
         #time.sleep(1)
         
+        least = None
+        
         for i in range(noOfServers):
-            selected_server = lb.pool[i]
+            
+            if(i + 1 < noOfServers):
+                compare = lb.pool[i+1]
+                selected_server = lb.pool[i]
+            else:
+                break  # "No servers are available to take your request"
+            
+           # compare = lb.pool[i+1]
+            #selected_server = lb.pool[i]
             
             if self.check_server_capacity(selected_server, packet) == False:
                 next
-            elif selected_server.serverReqs < least.serverReqs:
+            elif selected_server.serverReqs > compare.serverReqs:
+                least = lb.pool[i+1]
+            else:
                 least = lb.pool[i]
-                #least.serverReqs +=1
-                
+                         
+        if least == None:
+            return
+        else:
+            least.serverReqs +=1
+            least.totalReqs += 1
+            least.maxCapacity -= packet.packet_size
+            packet.connection_end = time.time() + float(packet.packet_size)
+            least.serverConnections.append(packet)
+            return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
+            
         
-        least.serverReqs +=1
-        least.totalReqs += 1
-        least.maxCapacity -= packet.packet_size
-        packet.connection_end = time.time() + float(packet.packet_size)
-        least.serverConnections.append(packet)
-        return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
     
     
     
@@ -161,7 +173,12 @@ if __name__ == "__main__":
     for _ in range(noOfRequests*2):
         currTime = time.time()
         result = lb.distribute_request()
-        print(f"{result} and time {currTime}")
+        
+        if result == None:
+            print("No servers available")
+        else:
+            print(f"{result} and time {currTime}")
+        
         time.sleep(1)
         
     for i in range(noOfServers):
