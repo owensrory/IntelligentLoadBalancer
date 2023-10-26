@@ -175,7 +175,10 @@ if __name__ == "__main__":
         result = lb.distribute_request()
         
         if result == None:
-            print("No servers available")
+            lb.add_server(Server(f"Server{noOfServers + 1}"))
+            noOfServers +=1
+            print("Creating New Server")
+            
         else:
             print(f"{result} and time {currTime}")
         
