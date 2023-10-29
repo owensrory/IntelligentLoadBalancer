@@ -5,7 +5,7 @@ import time
 import itertools
 
 
-noOfServers = 2 #random.randint(1,5)
+startingServers = 2 #random.randint(1,5)
 noOfRequests = 100
 
 class Packet:
@@ -20,10 +20,14 @@ class Packet:
 class LoadBalancer:
     def __init__(self):
         self.pool = []
+        self.noOfServers = startingServers
         self.request_queue = queue.Queue()
         # daemon set to true to shut down once program exits 
         self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
         self.check_connection_time.start()
+        self.utilisation_trigger = 50
+        self.check_load = threading.Thread(target=self.check_utilisation, daemon=True)
+        #self.check_load.start()
 
     def add_server(self, server):
         self.pool.append(server)
@@ -46,9 +50,6 @@ class LoadBalancer:
         if not self.pool:
             return "No servers available"
         
-        connection_end_value = [1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0]
-        #connection_end_value = [120.0,122.0,125.0,127.0,129.0]
-        # Get the next request from the queue
         packet = self.request_queue.get()
 
         #selected_server = random.choice(self.pool)
@@ -57,16 +58,14 @@ class LoadBalancer:
         
         least = None
         
-        for i in range(noOfServers):
+        for i in range(lb.noOfServers):
             
-            if(i + 1 < noOfServers):
+            if(i + 1 < lb.noOfServers):
                 compare = lb.pool[i+1]
                 selected_server = lb.pool[i]
             else:
-                break  # "No servers are available to take your request"
+                break  
             
-           # compare = lb.pool[i+1]
-            #selected_server = lb.pool[i]
             
             if self.check_server_capacity(selected_server, packet) == False:
                 next
@@ -76,6 +75,8 @@ class LoadBalancer:
                 least = lb.pool[i]
                          
         if least == None:
+            #lb.add_server(Server(f"Server{lb.noOfServers+1}"))
+            
             return
         else:
             least.serverReqs +=1
@@ -95,31 +96,60 @@ class LoadBalancer:
             time.sleep(0.25)
             
             
-            for i in range(noOfServers):
-                selected_server = lb.pool[i]
+            if len(lb.pool) < 1:
+                return
+            else:
+                for i in range(lb.noOfServers):
+                    selected_server = lb.pool[i]
                 
-                try:
-                    for j in range(len(selected_server.serverConnections)):
-                        packet = selected_server.serverConnections[j]
+                    try:
+                        for j in range(len(selected_server.serverConnections)):
+                            packet = selected_server.serverConnections[j]
                 
-                        if packet.connection_end < time.time():
-                            selected_server.serverConnections.remove(packet)
-                            selected_server.maxCapacity += packet.packet_size
-                            selected_server.serverReqs -=1
-                except:
-                    next
+                            if packet.connection_end < time.time():
+                                selected_server.serverConnections.remove(packet)
+                                selected_server.maxCapacity += packet.packet_size
+                                selected_server.serverReqs -=1
+                    except:
+                        next
+            
+                     
+                     
+    def check_utilisation(self):
+        while True:
+           # time.sleep(0.25)
+            
+            poolUtilisation =  self.calculate_utilisation()
+        
+            if poolUtilisation >= lb.utilisation_trigger:
+            
+                print("\nAdding new server")
+                lb.add_server(Server(f"Server{lb.noOfServers + 1}"))
+                lb.noOfServers +=1
                 
-                #if len(selected_server.serverConnections) == 0:
-                 #   next
-                #else:
-                 #   for j in range(len(selected_server.serverConnections)):
-                  #      packet = selected_server.serverConnections[j]
+        
                 
-                   #     if packet.connection_end < time.time():
-                    #        selected_server.serverConnections.remove(packet)
-                     #       selected_server.serverReqs -=1
-                        
                 
+    def calculate_utilisation(self):
+        
+        poolUtilisation = 0
+        try:
+                
+            for i in range(lb.noOfServers):
+                server = lb.pool[i]
+                server.utilisation = ((100.0 - server.maxCapacity) / 100.0) * 100.0
+        
+            for server in lb.pool:
+                poolUtilisation += server.utilisation
+                
+        except:
+            next
+                
+        return poolUtilisation
+                
+            
+                
+                  
 
 class Client:
     def __init__(self, load_balancer):
@@ -136,7 +166,8 @@ class Server:
         self.serverReqs = 0
         self.totalReqs = 0
         self.serverConnections = []
-        self.maxCapacity = 100      # This is in mb
+        self.maxCapacity = 200.0      # This is in mb
+        self.utilisation = 0.0
         
 
 if __name__ == "__main__":
@@ -145,18 +176,15 @@ if __name__ == "__main__":
     startingTime = time.time()
     
     print(f"starting time {startingTime}")
-    
-    
-    #for i in range(noOfServers):
-    #    lb.add_server(f"Server{i+1}")
         
-    for i in range(noOfServers):
+    for i in range(startingServers):
         lb.add_server(Server(f"Server{i+1}"))
 
 
     client1 = Client(lb)
     client2 = Client(lb)
- 
+    
+    lb.check_load.start()
     
     id_obj = itertools.count()
 
@@ -175,15 +203,17 @@ if __name__ == "__main__":
         result = lb.distribute_request()
         
         if result == None:
-            lb.add_server(Server(f"Server{noOfServers + 1}"))
-            noOfServers +=1
-            print("Creating New Server")
+            #lb.add_server(Server(f"Server{noOfServers + 1}"))
+            #lb.noOfServers = len(lb.pool)
+            print("New Server added")
+            
             
         else:
             print(f"{result} and time {currTime}")
         
         time.sleep(1)
         
-    for i in range(noOfServers):
+        
+    for i in range(lb.noOfServers):
         serverchoice = lb.pool[i]
         print(f"{serverchoice.serverId} no of requests {serverchoice.serverReqs}")
