@@ -30,18 +30,19 @@ if __name__ == "__main__":
     client2 = Client(lb)
     
     lb.check_load.start()
+    lb.check_removalservers.start()
     
     id_obj = itertools.count()
 
     # Sequential requests
     for i in range(noOfRequests):
         
-        client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj), random.randint(1,40))
+        client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj), random.randint(1,40), lb.vip)
         
      # Sequential requests
     for i in range(noOfRequests):
         
-        client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40))
+        client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40), lb.vip)
 
     for _ in range(noOfRequests*2):
         currTime = time.time()
