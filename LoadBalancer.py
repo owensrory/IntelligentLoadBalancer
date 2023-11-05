@@ -31,9 +31,10 @@ class LoadBalancer:
         self.pool.remove(server)
         
 
-    def check_server_capacity(self, server, packet):
+    def check_server_capacity(self, server):
         
-        if (server.maxCapacity - packet.packet_size) <= 0:
+        # if sever reqs is equal to max capacity then it cannot process any more requests
+        if server.maxCapacity == server.serverReqs:
             return False
         else:
             return True
@@ -63,12 +64,19 @@ class LoadBalancer:
                 break  
             
             
-            if self.check_server_capacity(selected_server, packet) == False:
+            if self.check_server_capacity(selected_server) == False:
                 next
-            elif selected_server.serverReqs > compare.serverReqs:
-                least = self.pool[i+1]
+            elif self.checkWeightedCapacity(selected_server, compare) == True:                   #selected_server.serverReqs > compare.serverReqs:
+               # least = self.pool[i]
+                
+                if least == None:
+                    least = self.pool[i]
+                elif selected_server.serverReqs < least.serverReqs:
+                    least = self.pool[i]
+                else:
+                    next 
             else:
-                least = self.pool[i]
+                least = self.pool[i+1]
                          
         if least == None:
             
@@ -76,12 +84,21 @@ class LoadBalancer:
         else:
             least.serverReqs +=1
             least.totalReqs += 1
-            least.maxCapacity -= packet.packet_size
             packet.connection_end = time.time() + float(packet.packet_size)
             packet.dest_ip = least.serverIP
             least.serverConnections.append(packet)
             return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
             
+        
+    def checkWeightedCapacity(self,selected_server,compare_server):
+        
+        selecServ = (selected_server.serverReqs / selected_server.maxCapacity) * 100
+        compareServ = (compare_server.serverReqs / compare_server.maxCapacity) * 100
+        
+        if selecServ <= compareServ:
+            return True
+        else:
+            return False
         
     
     
@@ -108,7 +125,6 @@ class LoadBalancer:
                 
                             if packet.connection_end < time.time():
                                 selected_server.serverConnections.remove(packet)
-                                selected_server.maxCapacity += packet.packet_size
                                 selected_server.serverReqs -=1
                     except:
                         next
@@ -125,14 +141,13 @@ class LoadBalancer:
             poolUtilisation =  self.calculate_utilisation()
         
             if poolUtilisation >= self.utilisation_trigger:
-            
                 print("Adding new server")
                 self.add_server(Server(f"Server{self.noOfServers + 1}"))
                 self.noOfServers +=1
-            elif self.underutilisation_trigger <= poolUtilisation and self.noOfServers > self.startingServers:
-                removal = self.pool[self.noOfServers -1]
-                if removal not in self.removal_servers:
-                    self.removal_servers.append(removal)
+           # elif self.underutilisation_trigger <= poolUtilisation and self.noOfServers > self.startingServers:
+            #    removal = self.pool[self.noOfServers -1]
+             #   if removal not in self.removal_servers:
+              #      self.removal_servers.append(removal)
                 
                 
         
@@ -143,11 +158,12 @@ class LoadBalancer:
         # Perform calculation to get utilisation value
 
         poolUtilisation = 0
+        
         try:
                 
             for i in range(self.noOfServers):
                 server = self.pool[i]
-                server.utilisation = ((server.maxCapacity / 200.0) * 100.0)
+                server.utilisation = ((server.serverReqs / server.maxCapacity) * 100.0)
         
             for server in self.pool:
                 poolUtilisation += server.utilisation

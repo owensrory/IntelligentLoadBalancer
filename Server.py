@@ -13,5 +13,5 @@ class Server:
         self.serverReqs = 0
         self.totalReqs = 0
         self.serverConnections = []
-        self.maxCapacity = 200.0      # This is in mb
+        self.maxCapacity = 15.0      # This is number of requests
         self.utilisation = 0.0
