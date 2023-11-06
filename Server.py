@@ -15,3 +15,4 @@ class Server:
         self.serverConnections = []
         self.maxCapacity = 15.0      # This is number of requests
         self.utilisation = 0.0
+        self.removalTrigger = 5

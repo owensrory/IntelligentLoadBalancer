@@ -55,35 +55,40 @@ class LoadBalancer:
         
         for i in range(self.noOfServers):
             
-            if (i + 1 < self.noOfServers) and len(self.removal_servers) > 0 and self.pool[i+1] == self.removal_servers[0]:
-                break
-            elif(i + 1 < self.noOfServers):
-                compare = self.pool[i+1]
-                selected_server = self.pool[i]
-            else:
-                break  
-            
-            
-            if self.check_server_capacity(selected_server) == False:
-                next
-            elif self.checkWeightedCapacity(selected_server, compare) == True:                   #selected_server.serverReqs > compare.serverReqs:
-               # least = self.pool[i]
-                
-                if least == None:
-                    least = self.pool[i]
-                elif selected_server.serverReqs < least.serverReqs:
-                    least = self.pool[i]
+            try:
+                if (i + 1 < self.noOfServers) and len(self.removal_servers) > 0 and self.pool[i+1] == self.removal_servers[0]:
+                    break
+                elif(i + 1 < self.noOfServers):
+                    compare = self.pool[i+1]
+                    selected_server = self.pool[i]
                 else:
-                    next 
-            else:
-                least = self.pool[i+1]
+                    break  
+            
+            
+                if self.check_server_capacity(selected_server) == False:
+                 next
+                elif self.checkWeightedCapacity(selected_server, compare) == True:                   #selected_server.serverReqs > compare.serverReqs:
+                # least = self.pool[i]
+                
+                    if least == None:
+                     least = self.pool[i]
+                    elif selected_server.serverReqs < least.serverReqs:
+                        least = self.pool[i]
+                    else:
+                        next 
+                else:
+                    least = self.pool[i+1]
+            except:
+                next
+            
                          
         if least == None:
             
             return
         else:
-            least.serverReqs +=1
+            least.serverReqs += 1
             least.totalReqs += 1
+            least.removalTrigger -= 1
             packet.connection_end = time.time() + float(packet.packet_size)
             packet.dest_ip = least.serverIP
             least.serverConnections.append(packet)
@@ -144,10 +149,18 @@ class LoadBalancer:
                 print("Adding new server")
                 self.add_server(Server(f"Server{self.noOfServers + 1}"))
                 self.noOfServers +=1
-           # elif self.underutilisation_trigger <= poolUtilisation and self.noOfServers > self.startingServers:
-            #    removal = self.pool[self.noOfServers -1]
-             #   if removal not in self.removal_servers:
-              #      self.removal_servers.append(removal)
+            elif poolUtilisation <= self.underutilisation_trigger and self.noOfServers > self.startingServers:
+                
+                try:
+                    removal = self.pool[self.noOfServers - 1]
+                
+                    if removal.removalTrigger > 0:
+                        next
+                    elif removal not in self.removal_servers:
+                        self.removal_servers.append(removal)
+                except:
+                    next
+                
                 
                 
         
@@ -181,11 +194,15 @@ class LoadBalancer:
 
             try:
                 for i in range(len(self.removal_servers)):
-                 checkRemoval = self.removal_servers[i]
-                 if checkRemoval.serverReqs < 1 :
-                    self.remove_server(checkRemoval)
-                    self.removal_servers.remove(checkRemoval)
-                    self.noOfServers -=1
+                    checkRemoval = self.removal_servers[i]
+                    if checkRemoval.serverReqs < 1 :
+                        self.remove_server(checkRemoval)
+                        print("Server removed")
+                        self.removal_servers.remove(checkRemoval)
+                        self.noOfServers -=1
+                    else:
+                        next
+                
 
             except:
                 next

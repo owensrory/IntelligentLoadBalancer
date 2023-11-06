@@ -51,7 +51,7 @@ if __name__ == "__main__":
         if result == None:
             #lb.add_server(Server(f"Server{noOfServers + 1}"))
             #lb.noOfServers = len(lb.pool)
-            print("New Server added")
+            print("No response")
             
             
         else:
