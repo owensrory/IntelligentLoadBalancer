@@ -4,16 +4,20 @@ import threading
 import time
 import itertools
 from Server import Server
+from Settings import Settings
+from datetime import datetime
 
 class LoadBalancer:
-    def __init__(self, startingServers):
+    def __init__(self, startingServers, timeNow):
         #self.startingServers = startingServers
         self.pool = []
         self.removal_servers = []
+        self.serverUpgrade = []
         self.startingServers = startingServers
         self.noOfServers = startingServers
         self.vip = "10.10.1.111"
         self.request_queue = queue.Queue()
+        self.timeNow = timeNow
         # daemon set to true to shut down once program exits 
         self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
         self.check_connection_time.start()
@@ -22,6 +26,7 @@ class LoadBalancer:
         self.check_load = threading.Thread(target=self.check_utilisation, daemon=True)
         #self.check_load.start()
         self.check_removalservers = threading.Thread(target=self.check_removal, daemon=True)
+        self.checkServerUpgrade = threading.Thread(target=self.check_for_upgrade, daemon=True)
 
     def add_server(self, server):
         self.pool.append(server)
@@ -50,6 +55,8 @@ class LoadBalancer:
         #selected_server = random.choice(self.pool)
         
         #time.sleep(1)
+        
+        
         
         least = None
         
@@ -206,3 +213,19 @@ class LoadBalancer:
 
             except:
                 next
+                
+    def check_for_upgrade(self):
+        while True:
+            
+            earliest = datetime.strptime(Settings.earliestTimestr, "%I:%M%p")
+            latest = datetime.strptime(Settings.latestTimestr, "%I:%M%p")
+            
+            
+            if self.timeNow >= earliest and self.timeNow <= latest:
+                if Server.serverOS == "Windows":
+                    pass
+                elif Server.serverOS == "Linux":
+                    pass
+                        
+            else:
+                break

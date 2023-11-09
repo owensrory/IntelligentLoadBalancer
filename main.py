@@ -7,16 +7,20 @@ from LoadBalancer import LoadBalancer
 from Packet import Packet
 from Server import Server
 from Client import Client
+from Settings import Settings
+from datetime import datetime
 
 
 
 startingServers = 2 #random.randint(1,5)
 noOfRequests = 100
+timeWorking = datetime.strptime(Settings.workingTimestr, "%I:%M%p")
+timeNotWorking = datetime.strptime(Settings.nonWorkingTimestr, "%I:%M%p")
 
         
 
 if __name__ == "__main__":
-    lb = LoadBalancer(startingServers)
+    lb = LoadBalancer(startingServers, timeWorking)
     
     startingTime = time.time()
     
