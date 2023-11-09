@@ -11,5 +11,5 @@ class Settings:
     workingTimestr = "11:45pm"
     nonWorkingTimestr = "7:00pm"
     serverOS = "Windows"
-    serverVersion = "1.01"
+    serverVersion = 1.01
         

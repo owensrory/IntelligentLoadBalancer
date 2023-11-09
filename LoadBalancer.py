@@ -6,6 +6,7 @@ import itertools
 from Server import Server
 from Settings import Settings
 from datetime import datetime
+from Windows import Windows
 
 class LoadBalancer:
     def __init__(self, startingServers, timeNow):
@@ -27,6 +28,9 @@ class LoadBalancer:
         #self.check_load.start()
         self.check_removalservers = threading.Thread(target=self.check_removal, daemon=True)
         self.checkServerUpgrade = threading.Thread(target=self.check_for_upgrade, daemon=True)
+        self.checkServerUpgrade.start()
+        self.performUpgrade = threading.Thread(target=self.upgradeServers, daemon=True)
+        self.performUpgrade.start()
 
     def add_server(self, server):
         self.pool.append(server)
@@ -63,13 +67,18 @@ class LoadBalancer:
         for i in range(self.noOfServers):
             
             try:
-                if (i + 1 < self.noOfServers) and len(self.removal_servers) > 0 and self.pool[i+1] == self.removal_servers[0]:
-                    break
-                elif(i + 1 < self.noOfServers):
-                    compare = self.pool[i+1]
-                    selected_server = self.pool[i]
+                if (i + 1 > self.noOfServers): #len(self.removal_servers) > 0
+                    next
+                elif(i + 1 < self.noOfServers) and len(self.removal_servers) > 0 and len(self.upgradeServers) > 0:
+                    
+                    if self.pool[i] == self.serverUpgrade[0] or self.pool[i+1] == self.serverUpgrade[0] or self.pool[i+1] == self.removal_servers[0]:
+                        next
+                    else:
+                        compare = self.pool[i+1]
+                        selected_server = self.pool[i]
                 else:
-                    break  
+                    compare = self.pool[i+1]
+                    selected_server = self.pool[i]  
             
             
                 if self.check_server_capacity(selected_server) == False:
@@ -217,15 +226,44 @@ class LoadBalancer:
     def check_for_upgrade(self):
         while True:
             
+            time.sleep(1)
+            
             earliest = datetime.strptime(Settings.earliestTimestr, "%I:%M%p")
             latest = datetime.strptime(Settings.latestTimestr, "%I:%M%p")
             
             
-            if self.timeNow >= earliest and self.timeNow <= latest:
-                if Server.serverOS == "Windows":
-                    pass
-                elif Server.serverOS == "Linux":
-                    pass
+            if self.timeNow >= earliest:
+               for i in range(self.noOfServers):
+                        server = self.pool[i]
                         
+                        if server.serverOS == "Windows" and len(self.serverUpgrade) < 1:
+                            if server.serverVersion < Windows.latestStableRelease:
+                                self.serverUpgrade.append(server)
+                            else:
+                                next
+                        elif server.serverOS == "Linux" and len(self.serverUpgrade) < 1:
+                            break
+                        
+    def upgradeServers(self):
+        
+        while True:
+            
+            time.sleep(0.25)
+            
+            if len(self.serverUpgrade) > 0 :
+                
+                server = self.serverUpgrade[0]
+                
+                if server.serverReqs == 0:
+                    server.serverVersion = Windows.latestStableRelease
+                else:
+                    break
             else:
                 break
+        
+        
+        
+                            
+                        
+                        
+                        

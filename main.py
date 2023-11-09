@@ -35,6 +35,7 @@ if __name__ == "__main__":
     
     lb.check_load.start()
     lb.check_removalservers.start()
+    #lb.checkServerUpgrade.start()
     
     id_obj = itertools.count()
 
