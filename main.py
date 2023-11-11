@@ -33,9 +33,10 @@ if __name__ == "__main__":
     client1 = Client(lb)
     client2 = Client(lb)
     
+    lb.check_connection_time.start()
     lb.check_load.start()
     lb.check_removalservers.start()
-    #lb.checkServerUpgrade.start()
+    lb.checkServerUpgrade.start()
     
     id_obj = itertools.count()
 

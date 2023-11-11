@@ -21,14 +21,14 @@ class LoadBalancer:
         self.timeNow = timeNow
         # daemon set to true to shut down once program exits 
         self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
-        self.check_connection_time.start()
+        #self.check_connection_time.start()
         self.utilisation_trigger = 50
         self.underutilisation_trigger = 30
         self.check_load = threading.Thread(target=self.check_utilisation, daemon=True)
         #self.check_load.start()
         self.check_removalservers = threading.Thread(target=self.check_removal, daemon=True)
         self.checkServerUpgrade = threading.Thread(target=self.check_for_upgrade, daemon=True)
-        self.checkServerUpgrade.start()
+        #self.checkServerUpgrade.start()
         self.performUpgrade = threading.Thread(target=self.upgradeServers, daemon=True)
         self.performUpgrade.start()
 
@@ -56,44 +56,49 @@ class LoadBalancer:
         
         packet = self.request_queue.get()
 
-        #selected_server = random.choice(self.pool)
-        
-        #time.sleep(1)
-        
-        
-        
         least = None
         
         for i in range(self.noOfServers):
             
             try:
+                # checks to see if there is another server to compare with in the list
                 if (i + 1 > self.noOfServers): #len(self.removal_servers) > 0
                     next
-                elif(i + 1 < self.noOfServers) and len(self.removal_servers) > 0 and len(self.upgradeServers) > 0:
-                    
-                    if self.pool[i] == self.serverUpgrade[0] or self.pool[i+1] == self.serverUpgrade[0] or self.pool[i+1] == self.removal_servers[0]:
-                        next
-                    else:
-                        compare = self.pool[i+1]
-                        selected_server = self.pool[i]
-                else:
-                    compare = self.pool[i+1]
-                    selected_server = self.pool[i]  
-            
-            
-                if self.check_server_capacity(selected_server) == False:
-                 next
-                elif self.checkWeightedCapacity(selected_server, compare) == True:                   #selected_server.serverReqs > compare.serverReqs:
-                # least = self.pool[i]
                 
-                    if least == None:
-                     least = self.pool[i]
-                    elif selected_server.serverReqs < least.serverReqs:
-                        least = self.pool[i]
-                    else:
-                        next 
                 else:
-                    least = self.pool[i+1]
+                    if len(self.removal_servers) > 0 or len(self.serverUpgrade) > 0:
+                        
+                        selected_server = self.pool[i]
+                        
+                        if self.checkInLists(selected_server) == True:
+                            next
+                        else:
+                            if self.check_server_capacity(selected_server) == False:
+                                next                              
+                            elif least == None:
+                                least = self.pool[i]
+                            else:
+                                if self.checkWeightedCapacity(selected_server, least) == True:
+                                    least = self.pool[i]
+                                else:
+                                    next
+                         # create function that checks if i or i + 1 is in either list 
+            
+                    else:
+                        
+                        # compare = self.pool[i+1] now comparing with current least and i 
+                        selected_server = self.pool[i]
+                        
+                        if self.check_server_capacity(selected_server) == False:
+                            next                              
+                        elif least == None:
+                            least = self.pool[i]
+                        else:
+                            if self.checkWeightedCapacity(selected_server, least) == True:
+                                least = self.pool[i]
+                            else:
+                                next
+                                           
             except:
                 next
             
@@ -114,12 +119,28 @@ class LoadBalancer:
     def checkWeightedCapacity(self,selected_server,compare_server):
         
         selecServ = (selected_server.serverReqs / selected_server.maxCapacity) * 100
-        compareServ = (compare_server.serverReqs / compare_server.maxCapacity) * 100
+        CurrentLeastServ = (compare_server.serverReqs / compare_server.maxCapacity) * 100
         
-        if selecServ <= compareServ:
+        if selecServ < CurrentLeastServ:
             return True
         else:
             return False
+        
+    def checkInLists(self, server):
+        
+        if len(self.serverUpgrade) > 0:
+            if server == self.serverUpgrade[0]:
+                return True
+            else:
+                return False
+            
+        elif len(self.removal_servers) > 0:
+            if server == self.removal_servers[0]:
+                return True
+            else:
+                return False
+        
+        
         
     
     
@@ -129,11 +150,11 @@ class LoadBalancer:
         # checking connection in order to remove and free up server
 
         while True:
-            time.sleep(0.25)
+            
             
             
             if len(self.pool) < 1:
-                return
+                pass
             else:
                 for i in range(self.noOfServers):
                     
@@ -141,7 +162,10 @@ class LoadBalancer:
                     try:
 
                         selected_server = self.pool[i]
-                        for j in range(len(selected_server.serverConnections)):
+                        
+                        values = len(selected_server.serverConnections)
+                        
+                        for j in range(values):
                             packet = selected_server.serverConnections[j]
                 
                             if packet.connection_end < time.time():
@@ -187,17 +211,31 @@ class LoadBalancer:
         # Perform calculation to get utilisation value
 
         poolUtilisation = 0
+        minusServers = 0
         
         try:
                 
             for i in range(self.noOfServers):
                 server = self.pool[i]
-                server.utilisation = ((server.serverReqs / server.maxCapacity) * 100.0)
+                
+                if self.checkInLists(server) == False:
+                    server.utilisation = ((server.serverReqs / server.maxCapacity) * 100.0)
+                else: 
+                    next
+                    
+                
         
             for server in self.pool:
-                poolUtilisation += server.utilisation
+                
+                if self.checkInLists(server) == False:
+                    poolUtilisation += server.utilisation
+                else: 
+                    minusServers +=1
+                    next
+                    
+            serverNum = self.noOfServers - minusServers
 
-            poolUtilisation = poolUtilisation/self.noOfServers
+            poolUtilisation = poolUtilisation/serverNum
                 
         except:
             next
@@ -233,12 +271,14 @@ class LoadBalancer:
             
             
             if self.timeNow >= earliest:
-               for i in range(self.noOfServers):
+                # only upgrading from the original servers as new ones are just temporary
+               for i in range(self.startingServers):
                         server = self.pool[i]
                         
-                        if server.serverOS == "Windows" and len(self.serverUpgrade) < 1:
+                        if server.serverOS == "Windows" and len(self.serverUpgrade) < 1 and server.removalTrigger < 1 and self.calculate_utilisation() < 20.0:
                             if server.serverVersion < Windows.latestStableRelease:
                                 self.serverUpgrade.append(server)
+                                print(f"{server.serverId} no longer accepting requests")
                             else:
                                 next
                         elif server.serverOS == "Linux" and len(self.serverUpgrade) < 1:
@@ -248,18 +288,20 @@ class LoadBalancer:
         
         while True:
             
-            time.sleep(0.25)
+            
             
             if len(self.serverUpgrade) > 0 :
                 
                 server = self.serverUpgrade[0]
                 
                 if server.serverReqs == 0:
+                    print(f"Upgrading {server.serverId}")
                     server.serverVersion = Windows.latestStableRelease
+                    self.serverUpgrade.remove(server)
                 else:
-                    break
+                    pass
             else:
-                break
+                pass
         
         
         
