@@ -36,7 +36,9 @@ if __name__ == "__main__":
     lb.check_connection_time.start()
     lb.check_load.start()
     lb.check_removalservers.start()
-    lb.checkServerUpgrade.start()
+    #lb.checkServerUpgrade.start()
+    lb.healthChecks.start()
+    lb.breakServer.start()
     
     id_obj = itertools.count()
 
@@ -49,6 +51,8 @@ if __name__ == "__main__":
     for i in range(noOfRequests):
         
         client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40), lb.vip)
+        
+    lb.breakRandomServer()
 
     for _ in range(noOfRequests*2):
         currTime = time.time()

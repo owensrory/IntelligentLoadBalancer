@@ -13,6 +13,7 @@ class LoadBalancer:
         #self.startingServers = startingServers
         self.pool = []
         self.removal_servers = []
+        self.serversInfo = {}
         self.serverUpgrade = []
         self.startingServers = startingServers
         self.noOfServers = startingServers
@@ -21,19 +22,29 @@ class LoadBalancer:
         self.timeNow = timeNow
         # daemon set to true to shut down once program exits 
         self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
-        #self.check_connection_time.start()
         self.utilisation_trigger = 50
         self.underutilisation_trigger = 30
+        
+        # check pool utilisation
         self.check_load = threading.Thread(target=self.check_utilisation, daemon=True)
-        #self.check_load.start()
+        # check if temp servers can be removed
         self.check_removalservers = threading.Thread(target=self.check_removal, daemon=True)
+        # check if upgrade is needed for servers
         self.checkServerUpgrade = threading.Thread(target=self.check_for_upgrade, daemon=True)
-        #self.checkServerUpgrade.start()
+        # perform the server upgrade if reqs are at 0
         self.performUpgrade = threading.Thread(target=self.upgradeServers, daemon=True)
-        self.performUpgrade.start()
+        #self.performUpgrade.start()
+        
+        # Perform health check on servers
+        self.healthChecks = threading.Thread(target=self.healthCheck, daemon=True)
+        
+        # Randomly break a server
+        self.breakServer = threading.Thread(target=self.breakRandomServer, daemon=True)
+        
 
     def add_server(self, server):
         self.pool.append(server)
+        self.serversInfo[f"{server.serverId}"] = [0, True]
         
 
     def remove_server(self, server):
@@ -42,8 +53,8 @@ class LoadBalancer:
 
     def check_server_capacity(self, server):
         
-        # if sever reqs is equal to max capacity then it cannot process any more requests
-        if server.maxCapacity == server.serverReqs:
+        # if server reqs is equal to max capacity then it cannot process any more requests
+        if server.maxCapacity == self.serversInfo[f"{server.serverId}"][0]:
             return False
         else:
             return True
@@ -66,6 +77,8 @@ class LoadBalancer:
                     next
                 
                 else:
+                    
+                        
                     if len(self.removal_servers) > 0 or len(self.serverUpgrade) > 0:
                         
                         selected_server = self.pool[i]
@@ -89,7 +102,9 @@ class LoadBalancer:
                         # compare = self.pool[i+1] now comparing with current least and i 
                         selected_server = self.pool[i]
                         
-                        if self.check_server_capacity(selected_server) == False:
+                        if self.serversInfo[f"{selected_server.serverId}"][1] == False:
+                            next
+                        elif self.check_server_capacity(selected_server) == False:
                             next                              
                         elif least == None:
                             least = self.pool[i]
@@ -108,6 +123,7 @@ class LoadBalancer:
             return
         else:
             least.serverReqs += 1
+            self.serversInfo[f"{least.serverId}"][0] +=1
             least.totalReqs += 1
             least.removalTrigger -= 1
             packet.connection_end = time.time() + float(packet.packet_size)
@@ -118,8 +134,8 @@ class LoadBalancer:
         
     def checkWeightedCapacity(self,selected_server,compare_server):
         
-        selecServ = (selected_server.serverReqs / selected_server.maxCapacity) * 100
-        CurrentLeastServ = (compare_server.serverReqs / compare_server.maxCapacity) * 100
+        selecServ = (self.serversInfo[f"{selected_server.serverId}"][0] / selected_server.maxCapacity) * 100
+        CurrentLeastServ = (self.serversInfo[f"{compare_server.serverId}"][0] / compare_server.maxCapacity) * 100
         
         if selecServ < CurrentLeastServ:
             return True
@@ -139,6 +155,8 @@ class LoadBalancer:
                 return True
             else:
                 return False
+        else:
+            return False
         
         
         
@@ -171,6 +189,7 @@ class LoadBalancer:
                             if packet.connection_end < time.time():
                                 selected_server.serverConnections.remove(packet)
                                 selected_server.serverReqs -=1
+                                self.serversInfo[f"{selected_server.serverId}"][0] -=1
                     except:
                         next
             
@@ -186,7 +205,7 @@ class LoadBalancer:
             poolUtilisation =  self.calculate_utilisation()
         
             if poolUtilisation >= self.utilisation_trigger:
-                print("Adding new server")
+                print(f"Adding new server, Pool utilisation {poolUtilisation}")
                 self.add_server(Server(f"Server{self.noOfServers + 1}"))
                 self.noOfServers +=1
             elif poolUtilisation <= self.underutilisation_trigger and self.noOfServers > self.startingServers:
@@ -219,7 +238,7 @@ class LoadBalancer:
                 server = self.pool[i]
                 
                 if self.checkInLists(server) == False:
-                    server.utilisation = ((server.serverReqs / server.maxCapacity) * 100.0)
+                    server.utilisation = ((self.serversInfo[f"{server.serverId}"][0] / server.maxCapacity) * 100.0)
                 else: 
                     next
                     
@@ -227,7 +246,7 @@ class LoadBalancer:
         
             for server in self.pool:
                 
-                if self.checkInLists(server) == False:
+                if self.checkInLists(server) == False and self.serversInfo[f"{server.serverId}"][1] == True:
                     poolUtilisation += server.utilisation
                 else: 
                     minusServers +=1
@@ -249,9 +268,9 @@ class LoadBalancer:
             try:
                 for i in range(len(self.removal_servers)):
                     checkRemoval = self.removal_servers[i]
-                    if checkRemoval.serverReqs < 1 :
+                    if self.serversInfo[f"{checkRemoval.serverId}"][0] < 1 :
                         self.remove_server(checkRemoval)
-                        print("Server removed")
+                        print(f"Server removed {checkRemoval}")
                         self.removal_servers.remove(checkRemoval)
                         self.noOfServers -=1
                     else:
@@ -294,7 +313,7 @@ class LoadBalancer:
                 
                 server = self.serverUpgrade[0]
                 
-                if server.serverReqs == 0:
+                if self.serversInfo[f"{server.serverId}"][0] == 0:
                     print(f"Upgrading {server.serverId}")
                     server.serverVersion = Windows.latestStableRelease
                     self.serverUpgrade.remove(server)
@@ -302,6 +321,48 @@ class LoadBalancer:
                     pass
             else:
                 pass
+            
+            
+    def healthCheck(self):
+        
+        while True:
+            
+            time.sleep(0.5)
+            
+            for server in self.pool:
+                if self.pingServers(server) == False:
+                     # this will call a troubleshooting function
+                    pass
+                else: 
+                    next
+                    
+    
+    def pingServers(self, server):
+        
+        if self.serversInfo[f"{server.serverId}"][1] == True:
+            next
+        else:
+            self.serversInfo[f"{server.serverId}"][1] = False
+            
+    def breakRandomServer(self):
+    
+        waitTime = random.randint(2,6)
+    
+    
+        time.sleep(waitTime)
+        
+        server = random.choice(self.pool)
+        
+        self.serversInfo[f"{server.serverId}"][1] = False
+    
+    
+    
+       
+        
+        
+        
+        
+                
         
         
         
