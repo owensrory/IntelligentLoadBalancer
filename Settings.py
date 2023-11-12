@@ -12,4 +12,6 @@ class Settings:
     nonWorkingTimestr = "7:00pm"
     serverOS = "Windows"
     serverVersion = 1.01
+    adminUsername = "admin"
+    adminPassword = "admin"
         

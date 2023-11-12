@@ -19,3 +19,8 @@ class Server:
         self.removalTrigger = 5
         self.serverOS = Settings.serverOS
         self.serverVersion = Settings.serverVersion
+        
+    def sshAttempt(self, loginString, password):
+        
+        
+        pass

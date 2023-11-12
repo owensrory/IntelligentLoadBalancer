@@ -331,8 +331,9 @@ class LoadBalancer:
             
             for server in self.pool:
                 if self.pingServers(server) == False:
-                     # this will call a troubleshooting function
-                    pass
+                    self.serverTroubleshooting(server)
+                    return False
+                    #pass
                 else: 
                     next
                     
@@ -342,7 +343,9 @@ class LoadBalancer:
         if self.serversInfo[f"{server.serverId}"][1] == True:
             next
         else:
-            self.serversInfo[f"{server.serverId}"][1] = False
+            #self.serversInfo[f"{server.serverId}"][1] = False
+            print(f"Server Unresponsive: {server.serverId}")
+            return False
             
     def breakRandomServer(self):
     
@@ -354,6 +357,21 @@ class LoadBalancer:
         server = random.choice(self.pool)
         
         self.serversInfo[f"{server.serverId}"][1] = False
+        
+        
+    def serverTroubleshooting(self,server):
+        
+        sshAttempt = self.ssh(Settings.adminUsername, Settings.adminPassword, server)
+        
+        
+        
+    def ssh(self, username, password, server):
+        
+        loginString = f"ssh {username}@{server.serverIP}"
+        
+        server.sshAttempt(loginString, password)
+        
+        pass
     
     
     
