@@ -129,6 +129,11 @@ class LoadBalancer:
             packet.connection_end = time.time() + float(packet.packet_size)
             packet.dest_ip = least.serverIP
             least.serverConnections.append(packet)
+            logTime = time.time()
+            logTime2 = datetime.fromtimestamp(logTime)
+            with open("ConnectionLog.txt", "a") as writer:
+                    writer.write(f"Request {packet.content} from {packet.source_ip} handled by {least.serverId} {logTime2}\n")
+                    
             return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
             
         
@@ -349,7 +354,7 @@ class LoadBalancer:
             
     def breakRandomServer(self):
     
-        waitTime = random.randint(2,6)
+        waitTime = random.randint(4,8)
     
     
         time.sleep(waitTime)
@@ -363,9 +368,30 @@ class LoadBalancer:
         
         sshAttempt = self.ssh(Settings.adminUsername, Settings.adminPassword, server)
         
+        routingTableCommand = "route print"
+        ipConfigCommand = "IPconfig"
+        
         match sshAttempt:
             case "SSH successful":
-                pass
+                routingTable = server.serverCommandLine(routingTableCommand)
+                if len(routingTable) > 0:
+                    
+                    with open("troubleshooting.txt", "w") as writer:
+                        for line in routingTable:
+                          writer.write(line)
+                else:
+                    pass
+                
+                ipConfig = server.serverCommandLine(ipConfigCommand)
+                if len(ipConfig) > 0:
+                    
+                    with open("troubleshooting.txt", "a") as writer:
+                        writer.write("\n")
+                        for line in ipConfig:
+                            writer.write(line)
+                else:
+                    pass
+                    
             case "SSH unsuccessful":
                 pass
         

@@ -35,17 +35,27 @@ class Server:
                 else:
                     return "SSH unsuccessful"
                 
-    '''           
+              
     def serverCommandLine(self, command):
         
         if command == "route print":
             with open("RoutingTable.txt", "r") as reader:
-                line = reader.readline()
-                while line != '':
-                    write
-            routeTable = routingTable.readlines()
+                routeTable = reader.readlines()
+            return routeTable
+        
+        match command:
+            case "route print":
+                with open("RoutingTable.txt", "r") as reader:
+                    routeTable = reader.readlines()
+                return routeTable
+            case "IPconfig":
+                with open("IPConfig.txt", "r") as reader:
+                    ipconfig = reader.readlines()
+                return ipconfig
+                
             
-            '''
+            
+            
             
                 
             
