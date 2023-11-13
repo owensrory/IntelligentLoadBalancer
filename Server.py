@@ -22,5 +22,33 @@ class Server:
         
     def sshAttempt(self, loginString, password):
         
+        correctUsername = "admin"
+        correctPassword = "admin"
         
-        pass
+        loginStringCompare = f"{correctUsername}@{self.serverIP}"
+        
+        
+        match loginString:
+            case loginStringCompare:
+                if correctPassword == password:
+                    return "SSH successful"
+                else:
+                    return "SSH unsuccessful"
+                
+    '''           
+    def serverCommandLine(self, command):
+        
+        if command == "route print":
+            with open("RoutingTable.txt", "r") as reader:
+                line = reader.readline()
+                while line != '':
+                    write
+            routeTable = routingTable.readlines()
+            
+            '''
+            
+                
+            
+             
+        
+        

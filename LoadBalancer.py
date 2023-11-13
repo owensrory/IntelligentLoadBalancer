@@ -363,15 +363,24 @@ class LoadBalancer:
         
         sshAttempt = self.ssh(Settings.adminUsername, Settings.adminPassword, server)
         
+        match sshAttempt:
+            case "SSH successful":
+                pass
+            case "SSH unsuccessful":
+                pass
+        
         
         
     def ssh(self, username, password, server):
         
         loginString = f"ssh {username}@{server.serverIP}"
         
-        server.sshAttempt(loginString, password)
+        answer = server.sshAttempt(loginString, password)
         
-        pass
+        return answer
+        
+        
+        
     
     
     
