@@ -63,6 +63,7 @@ Active Routes:
 ===========================================================================
 Persistent Routes:
   None
+
 PS server> ipconfig
 
 Windows IP Configuration
@@ -119,3 +120,13 @@ Ethernet adapter Bluetooth Network Connection:
 
    Media State . . . . . . . . . . . : Media disconnected
    Connection-specific DNS Suffix  . :
+
+Last successful connections:
+
+Request Request1 from 10.10.0.116 handled by Server1 2023-11-13 18:29:50.068910
+
+Request Request4 from 10.10.0.116 handled by Server1 2023-11-13 18:29:54.052934
+
+
+Server Connections at time of error: 2
+Server Utilisation at time of error: 13.33%

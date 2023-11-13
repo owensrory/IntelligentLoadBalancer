@@ -387,10 +387,34 @@ class LoadBalancer:
                     
                     with open("troubleshooting.txt", "a") as writer:
                         writer.write("\n")
+                        writer.write("\n")
                         for line in ipConfig:
                             writer.write(line)
                 else:
                     pass
+                
+                with open('ConnectionLog.txt') as f:
+                    datafile = f.readlines()
+                found = False  # This isn't really necessary
+                with open("troubleshooting.txt", "a") as writer:
+                    writer.write("\n")
+                    writer.write("\n")
+                    writer.write("Last successful connections:\n")
+                for line in datafile:
+                    if server.serverId in line:
+                        with open("troubleshooting.txt", "a") as writer:
+                            writer.write("\n")
+                            writer.write(line)
+                            
+                serverConnections = self.serversInfo[f"{server.serverId}"][0]
+                serverUtilisation = format(server.utilisation, ".2f")
+                
+                with open("troubleshooting.txt", "a") as writer:
+                    writer.write("\n")
+                    writer.write("\n")
+                    writer.write(f"Server Connections at time of error: {serverConnections}\n")
+                    writer.write(f"Server Utilisation at time of error: {serverUtilisation}%")
+                            
                     
             case "SSH unsuccessful":
                 pass
