@@ -1,4 +1,5 @@
 import random
+from Windows import Windows
 import queue
 import threading
 import time
@@ -38,10 +39,6 @@ class Server:
               
     def serverCommandLine(self, command):
         
-        if command == "route print":
-            with open("RoutingTable.txt", "r") as reader:
-                routeTable = reader.readlines()
-            return routeTable
         
         match command:
             case "route print":
@@ -52,6 +49,17 @@ class Server:
                 with open("IPConfig.txt", "r") as reader:
                     ipconfig = reader.readlines()
                 return ipconfig
+            case "Wusa WindowsUpdate1.02.msu /quiet":
+                upgradeAttempt = self.upgradeServer(command)
+                
+                if upgradeAttempt == "upgraded":
+                    return "upgraded"
+                
+    def upgradeServer(self,command):
+        
+        self.serverVersion = Windows.latestStableRelease
+        
+        return "upgraded"
                 
             
             

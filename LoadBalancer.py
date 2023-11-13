@@ -33,7 +33,7 @@ class LoadBalancer:
         self.checkServerUpgrade = threading.Thread(target=self.check_for_upgrade, daemon=True)
         # perform the server upgrade if reqs are at 0
         self.performUpgrade = threading.Thread(target=self.upgradeServers, daemon=True)
-        #self.performUpgrade.start()
+        self.performUpgrade.start()
         
         # Perform health check on servers
         self.healthChecks = threading.Thread(target=self.healthCheck, daemon=True)
@@ -275,7 +275,7 @@ class LoadBalancer:
                     checkRemoval = self.removal_servers[i]
                     if self.serversInfo[f"{checkRemoval.serverId}"][0] < 1 :
                         self.remove_server(checkRemoval)
-                        print(f"Server removed {checkRemoval}")
+                        print(f"Server removed {checkRemoval.serverId}")
                         self.removal_servers.remove(checkRemoval)
                         self.noOfServers -=1
                     else:
@@ -320,8 +320,17 @@ class LoadBalancer:
                 
                 if self.serversInfo[f"{server.serverId}"][0] == 0:
                     print(f"Upgrading {server.serverId}")
-                    server.serverVersion = Windows.latestStableRelease
-                    self.serverUpgrade.remove(server)
+                    sshAttempt = self.ssh(Settings.adminUsername, Settings.adminPassword, server)
+                    
+                    match sshAttempt:
+                        case "SSH successful":
+                            upgrade = server.serverCommandLine(Windows.updateCommand)
+                            
+                            if upgrade == "upgraded":
+                                self.serverUpgrade.remove(server)
+                                print(f"{server.serverId} successfully upgraded")
+                    #server.serverVersion = Windows.latestStableRelease
+                    
                 else:
                     pass
             else:

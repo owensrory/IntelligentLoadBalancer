@@ -12,7 +12,7 @@ from datetime import datetime
 
 
 
-startingServers = 2 #random.randint(1,5)
+startingServers = 5 #random.randint(1,5)
 noOfRequests = 100
 timeWorking = datetime.strptime(Settings.workingTimestr, "%I:%M%p")
 timeNotWorking = datetime.strptime(Settings.nonWorkingTimestr, "%I:%M%p")
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     lb.check_connection_time.start()
     lb.check_load.start()
     lb.check_removalservers.start()
-    #lb.checkServerUpgrade.start()
+    lb.checkServerUpgrade.start()
     lb.healthChecks.start()
     
     
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40), lb.vip)
         
     
-    lb.breakServer.start()
+    #lb.breakServer.start()
 
     for _ in range(noOfRequests*2):
         currTime = time.time()
