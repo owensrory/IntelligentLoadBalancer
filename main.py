@@ -9,24 +9,25 @@ from Server import Server
 from Client import Client
 from Settings import Settings
 from datetime import datetime
+from Evaluation import Evaluation
 
 
 
-startingServers = 5 #random.randint(1,5)
-noOfRequests = 100
+#startingServers = 5 #random.randint(1,5)
+#noOfRequests = 100
 timeWorking = datetime.strptime(Settings.workingTimestr, "%I:%M%p")
 timeNotWorking = datetime.strptime(Settings.nonWorkingTimestr, "%I:%M%p")
 
         
 
 if __name__ == "__main__":
-    lb = LoadBalancer(startingServers, timeWorking)
+    lb = LoadBalancer(Settings.startingServers, timeWorking)
     
     startingTime = time.time()
     
     print(f"starting time {startingTime}")
         
-    for i in range(startingServers):
+    for i in range(Settings.startingServers):
         lb.add_server(Server(f"Server{i+1}"))
 
 
@@ -43,19 +44,19 @@ if __name__ == "__main__":
     id_obj = itertools.count()
 
     # Sequential requests
-    for i in range(noOfRequests):
+    for i in range(Settings.NoOfRequests):
         
         client1.make_request(f"Request{i+1}", client1.ip_add, next(id_obj), random.randint(1,40), lb.vip)
         
      # Sequential requests
-    for i in range(noOfRequests):
+    for i in range(Settings.NoOfRequests):
         
         client2.make_request(f"Request{i+1}", client2.ip_add, next(id_obj), random.randint(1,40), lb.vip)
         
     
     #lb.breakServer.start()
 
-    for _ in range(noOfRequests*2):
+    for _ in range(Settings.NoOfRequests*2):
         currTime = time.time()
         result = lb.distribute_request()
         
@@ -68,9 +69,17 @@ if __name__ == "__main__":
         else:
             print(f"{result} and time {currTime}")
         
-        time.sleep(1)
+        
         
         
     for i in range(lb.noOfServers):
         serverchoice = lb.pool[i]
         print(f"{serverchoice.serverId} no of requests {serverchoice.serverReqs}")
+        
+    lb.stop()
+        
+    # Create an instance of Evaluation and plot the response times
+    evaluation = Evaluation()
+    evaluation.plot_response_times()
+    
+    

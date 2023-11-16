@@ -25,7 +25,11 @@ class Server:
         
         response = f"{self.serverId} processing {packet.content} from {packet.source_ip}"
         
-        return response
+        end_time = time.perf_counter()
+        response_time = end_time - packet.start_time
+        
+        
+        return response, response_time
         
     def sshAttempt(self, loginString, password):
         

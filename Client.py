@@ -12,5 +12,8 @@ class Client:
         self.ip_add = f"10.10.0.{random.randint(1,254)}"
 
     def make_request(self, content, source_ip, connection_id, packet_size, dest_ip):
+        
+        
         packet = Packet( content, source_ip, connection_id, packet_size, dest_ip)
+        
         self.load_balancer.request_queue.put(packet)

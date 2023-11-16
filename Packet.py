@@ -15,3 +15,4 @@ class Packet:
         self.connection_id = connection_id
         self.packet_size = packet_size
         self.dest_ip = dest_ip
+        self.start_time = 0.0

@@ -7,6 +7,7 @@ from Server import Server
 from Settings import Settings
 from datetime import datetime
 from Windows import Windows
+from Evaluation import Evaluation
 
 class LoadBalancer:
     def __init__(self, startingServers, timeNow):
@@ -20,6 +21,7 @@ class LoadBalancer:
         self.vip = "10.10.1.111"
         self.request_queue = queue.Queue()
         self.timeNow = timeNow
+        self.running = True
         # daemon set to true to shut down once program exits 
         self.check_connection_time = threading.Thread(target=self.check_connection, daemon=True)
         self.utilisation_trigger = 50
@@ -50,6 +52,9 @@ class LoadBalancer:
     def remove_server(self, server):
         self.pool.remove(server)
         
+    def stop(self):
+        self.running = False
+        
 
     def check_server_capacity(self, server):
         
@@ -66,6 +71,8 @@ class LoadBalancer:
             return "No servers available"
         
         packet = self.request_queue.get()
+        start_time = time.perf_counter()
+        packet.start_time = start_time
 
         least = None
         
@@ -134,8 +141,8 @@ class LoadBalancer:
             with open("ConnectionLog.txt", "a") as writer:
                     writer.write(f"Request {packet.content} from {packet.source_ip} handled by {least.serverId} {logTime2}\n")
                     
-            result = least.process_request(packet)
-                    
+            result, response_time = least.process_request(packet)
+            Evaluation.log_response_time(packet.content, response_time)
             #return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
             return result
             
@@ -175,7 +182,7 @@ class LoadBalancer:
         
         # checking connection in order to remove and free up server
 
-        while True:
+        while self.running:
             
             
             
@@ -207,8 +214,8 @@ class LoadBalancer:
 
         # check server utilisation to determine if more resources are needed
 
-        while True:
-            time.sleep(0.5)
+        while self.running:
+            #time.sleep(0.5)
             
             poolUtilisation =  self.calculate_utilisation()
         
@@ -271,7 +278,7 @@ class LoadBalancer:
     
 
     def check_removal(self):
-        while True:
+        while self.running:
 
             try:
                 for i in range(len(self.removal_servers)):
@@ -289,7 +296,7 @@ class LoadBalancer:
                 next
                 
     def check_for_upgrade(self):
-        while True:
+        while self.running:
             
             time.sleep(1)
             
@@ -313,7 +320,7 @@ class LoadBalancer:
                         
     def upgradeServers(self):
         
-        while True:
+        while self.running:
             
             
             
@@ -342,7 +349,7 @@ class LoadBalancer:
             
     def healthCheck(self):
         
-        while True:
+        while self.running:
             
             time.sleep(0.5)
             

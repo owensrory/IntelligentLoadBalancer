@@ -7,7 +7,7 @@ import itertools
 class Settings:
     
     startingServers = 2
-    NoOfRequests = 100
+    NoOfRequests = 20
     earliestTimestr = "11:00pm"
     latestTimestr = "6:00am"
     workingTimestr = "11:45pm"
