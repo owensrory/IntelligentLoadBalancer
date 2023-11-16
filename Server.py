@@ -21,6 +21,12 @@ class Server:
         self.serverOS = Settings.serverOS
         self.serverVersion = Settings.serverVersion
         
+    def process_request(self,packet):
+        
+        response = f"{self.serverId} processing {packet.content} from {packet.source_ip}"
+        
+        return response
+        
     def sshAttempt(self, loginString, password):
         
         correctUsername = "admin"

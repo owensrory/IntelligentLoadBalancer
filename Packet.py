@@ -8,6 +8,7 @@ import itertools
 class Packet:
     
     def __init__(self, content, ip, connection_id, packet_size, dest_ip):
+        #self.traffic_type = trafficType
         self.content = content
         self.source_ip = ip
         self.connection_end = 0.0

@@ -134,7 +134,10 @@ class LoadBalancer:
             with open("ConnectionLog.txt", "a") as writer:
                     writer.write(f"Request {packet.content} from {packet.source_ip} handled by {least.serverId} {logTime2}\n")
                     
-            return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
+            result = least.process_request(packet)
+                    
+            #return f"Request {packet.content} from {packet.source_ip} handled by {least.serverId}"
+            return result
             
         
     def checkWeightedCapacity(self,selected_server,compare_server):
