@@ -16,4 +16,4 @@ class Client:
         
         packet = Packet( content, source_ip, connection_id, packet_size, dest_ip)
         
-        self.load_balancer.request_queue.put(packet)
+        self.load_balancer.request_queue.append(packet)

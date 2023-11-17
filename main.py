@@ -36,8 +36,8 @@ if __name__ == "__main__":
     
     lb.check_connection_time.start()
     lb.check_load.start()
-    lb.check_removalservers.start()
-    lb.checkServerUpgrade.start()
+    #lb.check_removalservers.start()
+    #lb.checkServerUpgrade.start()
     lb.healthChecks.start()
     
     
@@ -56,16 +56,13 @@ if __name__ == "__main__":
     
     #lb.breakServer.start()
 
-    for _ in range(Settings.NoOfRequests*2):
+         
+    while lb.request_queue:
         currTime = time.time()
         result = lb.distribute_request()
-        
-        if result == None:
-            #lb.add_server(Server(f"Server{noOfServers + 1}"))
-            #lb.noOfServers = len(lb.pool)
+
+        if result is None:
             print("No response")
-            
-            
         else:
             print(f"{result} and time {currTime}")
         
@@ -79,7 +76,6 @@ if __name__ == "__main__":
     lb.stop()
         
     # Create an instance of Evaluation and plot the response times
-    evaluation = Evaluation()
-    evaluation.plot_response_times()
+    
     
     

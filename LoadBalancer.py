@@ -8,6 +8,7 @@ from Settings import Settings
 from datetime import datetime
 from Windows import Windows
 from Evaluation import Evaluation
+from collections import deque
 
 class LoadBalancer:
     def __init__(self, startingServers, timeNow):
@@ -19,7 +20,7 @@ class LoadBalancer:
         self.startingServers = startingServers
         self.noOfServers = startingServers
         self.vip = "10.10.1.111"
-        self.request_queue = queue.Queue()
+        self.request_queue = deque()
         self.timeNow = timeNow
         self.running = True
         # daemon set to true to shut down once program exits 
@@ -70,9 +71,14 @@ class LoadBalancer:
         if not self.pool:
             return "No servers available"
         
-        packet = self.request_queue.get()
+        packet = self.request_queue.popleft()
         start_time = time.perf_counter()
-        packet.start_time = start_time
+        
+        if packet.start_time == 0.0:
+            packet.start_time = start_time
+        else:
+            pass
+        
 
         least = None
         
@@ -126,7 +132,7 @@ class LoadBalancer:
             
                          
         if least == None:
-            
+            self.request_queue.appendleft(packet)
             return
         else:
             least.serverReqs += 1
@@ -220,9 +226,10 @@ class LoadBalancer:
             poolUtilisation =  self.calculate_utilisation()
         
             if poolUtilisation >= self.utilisation_trigger:
-                print(f"Adding new server, Pool utilisation {poolUtilisation}")
-                self.add_server(Server(f"Server{self.noOfServers + 1}"))
-                self.noOfServers +=1
+                #print(f"Adding new server, Pool utilisation {poolUtilisation}")
+                #self.add_server(Server(f"Server{self.noOfServers + 1}"))
+                #self.noOfServers +=1
+                pass
             elif poolUtilisation <= self.underutilisation_trigger and self.noOfServers > self.startingServers:
                 
                 try:
@@ -231,7 +238,8 @@ class LoadBalancer:
                     if removal.removalTrigger > 0:
                         next
                     elif removal not in self.removal_servers:
-                        self.removal_servers.append(removal)
+                        #self.removal_servers.append(removal)
+                        pass
                 except:
                     next
                 
